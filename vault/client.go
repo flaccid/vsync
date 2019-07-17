@@ -28,6 +28,9 @@ func New(c *config.AppConfig) (*Client, error) {
 		c.VaultToken = string(data)
 	}
 
+	// uncomment to debug vault token (insecure!)
+	// log.Debug("vault token: "+c.VaultToken)
+
 	// step: get the client configuration
 	config := api.DefaultConfig()
 	config.Address = c.Vault.Address
