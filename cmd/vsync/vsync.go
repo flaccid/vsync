@@ -70,8 +70,27 @@ func main() {
 			},
 		},
 		cli.Command{
+			Name:        "read-secret",
+			Aliases:     []string{"rs"},
+			Usage:       "reads a single secret from the vault",
+			UsageText:   "vsync --read-secret",
+			Description: "read single secret",
+			ArgsUsage:   "[secret path]",
+			Action: func(c *cli.Context) error {
+				if len(c.Args().First()) < 1 {
+					log.Fatal("please provide a secret path to read")
+				}
+				secret, err := client.ReadSecret(c.Args().First())
+				if err != nil {
+					log.Panic(err)
+				}
+				log.Info(secret)
+				return nil
+			},
+		},
+		cli.Command{
 			Name:        "write-secret",
-			Aliases:     []string{"as"},
+			Aliases:     []string{"ws"},
 			Usage:       "writes a single secret to the vault",
 			UsageText:   "vsync --write-secret",
 			Description: "write single secret",
