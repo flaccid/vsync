@@ -14,6 +14,13 @@ func (v *Client) Client() *api.Client {
 	return v.client
 }
 
+// ReadSecret reads a single secret from the vault
+func (v *Client) ReadSecret(path string) (*api.Secret, error) {
+	secret, err := v.client.Logical().Read(path)
+
+	return secret, err
+}
+
 // WriteSecret writes a single secret to the vault
 func (v *Client) WriteSecret(secret *Secret) error {
 	log.Debugf("write the secret: %s, %v", secret.Path, secret.Values)
