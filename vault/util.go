@@ -1,11 +1,19 @@
 package vault
 
 import (
+	"strings"
+
 	log "github.com/Sirupsen/logrus"
 )
 
-// WalkNode iterates on a secret path that appears to be folder
+// normalizeVaultPath takes out possible double slashes
+func normalizeVaultPath(path string) (newPath string) {
+	return strings.Replace(path, "//", "/", -1)
+}
+
+// walkNode iterates on a secret path that appears to be a folder
 func walkNode(v *Client, path string) {
+	path = normalizeVaultPath(path)
 	log.Debug("walk ", path)
 
 	secretsList, err := v.client.Logical().List(path)
