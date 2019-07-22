@@ -25,13 +25,14 @@ func beforeApp(c *cli.Context) error {
 
 	// construct the application config here
 	appConfig = &config.AppConfig{
+		Credentials: c.String("credentials"),
 		Vault: &api.Config{
 			Address: c.String("vault-addr"),
 		},
-		VaultPassword: c.String("vault-password"),
-		VaultToken:    c.String("vault-token"),
-		VaultUsername: c.String("vault-username"),
-		Credentials:   c.String("credentials"),
+		VaultPassword:   c.String("vault-password"),
+		VaultToken:      c.String("vault-token"),
+		VaultUsername:   c.String("vault-username"),
+		VaultEntrypoint: c.String("entrypoint"),
 	}
 
 	client, err = vault.New(appConfig)
@@ -114,7 +115,7 @@ func main() {
 			UsageText:   "vsync --dump-secrets",
 			Description: "dump em'",
 			Action: func(c *cli.Context) error {
-				client.DumpSecrets()
+				client.DumpSecrets(appConfig.VaultEntrypoint)
 				return nil
 			},
 		},
@@ -135,6 +136,12 @@ func main() {
 			Name:   "vault-password,p",
 			Usage:  "the vault password to use to authenticate to vault service",
 			EnvVar: "VAULT_PASSWORD",
+		},
+		cli.StringFlag{
+			Name:   "entrypoint,e",
+			Usage:  "vault entry point path",
+			EnvVar: "VAULT_PREFIX",
+			Value:  "/secret",
 		},
 		cli.StringFlag{
 			Name:   "vault-token,t",
