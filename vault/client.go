@@ -12,6 +12,9 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
+// TODO: look at completing the remaining auth methods from
+// https://github.com/cloudwatt/vault-sync/blob/master/pkg/vault/vault.go
+
 func New(c *config.AppConfig) (*Client, error) {
 	log.Debugf("create vault client to: %s", c.Vault.Address)
 
