@@ -128,6 +128,11 @@ func main() {
 			EnvVar: "VAULT_ADDR",
 		},
 		cli.StringFlag{
+			Name:   "vault-token,t",
+			Usage:  "a vault token used to authenticate to vault service",
+			EnvVar: "VAULT_TOKEN",
+		},
+		cli.StringFlag{
 			Name:   "vault-username,u",
 			Usage:  "the vault username to use to authenticate to vault service",
 			EnvVar: "VAULT_USERNAME",
@@ -138,29 +143,9 @@ func main() {
 			EnvVar: "VAULT_PASSWORD",
 		},
 		cli.StringFlag{
-			Name:   "vault-token,t",
-			Usage:  "a vault token used to authenticate to vault service",
-			EnvVar: "VAULT_TOKEN",
-		},
-		cli.StringFlag{
-			Name:   "vault-dest-addr",
-			Usage:  "destinatation vault url",
-			EnvVar: "VAULT_DEST_TOKEN",
-		},
-		cli.StringFlag{
-			Name:   "vault-dest-username",
-			Usage:  "destination vault username",
-			EnvVar: "VAULT_DEST_USERNAME",
-		},
-		cli.StringFlag{
-			Name:   "vault-dest-password",
-			Usage:  "destination vault password",
-			EnvVar: "VAULT_DEST_PASSWORD",
-		},
-		cli.StringFlag{
-			Name:   "vault-dest-token",
-			Usage:  "destination vault token",
-			EnvVar: "VAULT_DEST_TOKEN",
+			Name:   "credentials,c",
+			Usage:  "the path to a file (json|yaml) containing the username and password for userpass authenticaion",
+			EnvVar: "VAULT_CREDENTIALS",
 		},
 		cli.StringFlag{
 			Name:   "entrypoint,e",
@@ -169,13 +154,29 @@ func main() {
 			Value:  "/secret",
 		},
 		cli.StringFlag{
-			Name:   "credentials,c",
-			Usage:  "the path to a file (json|yaml) containing the username and password for userpass authenticaion",
-			EnvVar: "VAULT_CREDENTIALS",
+			Name:   "destination-vault-addr",
+			Usage:	"destination vault url",
+			EnvVar: "DESTINATION_VAULT_ADDR",
+		},
+		cli.StringFlag{
+			Name:   "destination-vault-token",
+			Usage:  "destination vault token",
+			EnvVar: "DESTINATION_VAULT_TOKEN",
+		},
+		cli.StringFlag{
+			Name:   "destination-vault-username",
+			Usage:  "destination vault username",
+			EnvVar: "DESTINATION_VAULT_USERNAME",
+		},
+		cli.StringFlag{
+			Name:   "destination-vault-password",
+			Usage:  "destination vault password",
+			EnvVar: "DESTINATION_VAULT_PASSWORD",
 		},
 		cli.StringFlag{
 			Name:  "log-level,l",
 			Usage: "logging threshold level: debug|info|warn|error|fatal|panic",
+			EnvVar: "VSYNC_LOG_LEVEL",
 			Value: "info",
 		},
 	}
