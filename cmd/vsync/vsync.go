@@ -138,15 +138,35 @@ func main() {
 			EnvVar: "VAULT_PASSWORD",
 		},
 		cli.StringFlag{
+			Name:   "vault-token,t",
+			Usage:  "a vault token used to authenticate to vault service",
+			EnvVar: "VAULT_TOKEN",
+		},
+		cli.StringFlag{
+			Name:   "vault-dest-addr",
+			Usage:  "destinatation vault url",
+			EnvVar: "VAULT_DEST_TOKEN",
+		},
+		cli.StringFlag{
+			Name:   "vault-dest-username",
+			Usage:  "destination vault username",
+			EnvVar: "VAULT_DEST_USERNAME",
+		},
+		cli.StringFlag{
+			Name:   "vault-dest-password",
+			Usage:  "destination vault password",
+			EnvVar: "VAULT_DEST_PASSWORD",
+		},
+		cli.StringFlag{
+			Name:   "vault-dest-token",
+			Usage:  "destination vault token",
+			EnvVar: "VAULT_DEST_TOKEN",
+		},
+		cli.StringFlag{
 			Name:   "entrypoint,e",
 			Usage:  "vault entry point path",
 			EnvVar: "VAULT_PREFIX",
 			Value:  "/secret",
-		},
-		cli.StringFlag{
-			Name:   "vault-token,t",
-			Usage:  "a vault token used to authenticate to vault service",
-			EnvVar: "VAULT_TOKEN",
 		},
 		cli.StringFlag{
 			Name:   "credentials,c",
