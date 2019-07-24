@@ -10,6 +10,38 @@ Hashicorp Vault one-way secrets sync tool (written in golang).
 
 `vsync --help`
 
+## Development
+
+The easiest way to get testing is to just run up a local vault dev server:
+
+`vault server -dev`
+
+Login to this vault, getting the token printed the server's stdout:
+
+`vault login -token=abcd123`
+
+Take note of https://stackoverflow.com/questions/49872480/vault-error-while-writing.
+You may need to change to the v1 secrets engine:
+
+```
+vault secrets disable secret
+vault secrets enable -version=1 -path=secret kv
+```
+
+You can use CLI options, but it may be easier to just add some settings to env:
+
+```
+export VAULT_ADDR=https://my-source-vault.suf:8200/
+export VAULT_TOKEN=my-source-vault-token
+export DESTINATION_VAULT_ADDR=http://localhost:8200
+export DESTINATION_VAULT_TOKEN=my-destination-vault-token
+# export VSYNC_LOG_LEVEL=debug
+```
+
+Now try a sync:
+
+`vsync sync-secrets`
+
 ## License
 
 - Author: Chris Fordham (<chris@fordham.id.au>)
