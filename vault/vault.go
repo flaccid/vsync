@@ -2,6 +2,7 @@ package vault
 
 import (
 	log "github.com/Sirupsen/logrus"
+	"github.com/flaccid/vsync/config"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -23,7 +24,7 @@ func (v *Client) ReadSecret(path string) (*api.Secret, error) {
 
 // WriteSecret writes a single secret to the vault
 func (v *Client) WriteSecret(secret *Secret) error {
-	log.Debugf("write the secret: %s, %v", secret.Path, secret.Values)
+	log.Debugf("write the secret to %s with %s", secret.Path, secret.Values)
 
 	_, err := v.client.Logical().Write(secret.Path, secret.Values)
 	if err != nil {
@@ -31,6 +32,31 @@ func (v *Client) WriteSecret(secret *Secret) error {
 	}
 
 	return nil
+}
+
+// writeSecret writes a single secret to the provided vault
+// a private function that requires providing your vault api client
+func writeSecret(v *api.Client, path string, secret *api.Secret) error {
+	log.Debugf("write the secret to %s with %s", path, secret.Data)
+
+	_, err := v.Logical().Write(path, secret.Data)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// ListSecrets lists secrets located at the provided path
+func (v *Client) ListSecrets(path string) {
+	secretsList, err := v.client.Logical().List(path)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for k, v := range secretsList.Data {
+		log.Printf("%v %v\n", k, v)
+	}
 }
 
 // ListVaultMounts lists the mounts within the vault
@@ -48,4 +74,18 @@ func (v *Client) ListVaultMounts() {
 // DumpSecrets dumps all the secrets within the vault recursiviely
 func (v *Client) DumpSecrets(entryPoint string) {
 	walkNode(v, entryPoint)
+}
+
+// SyncSecret syncs a single secret from source to destination vault
+func (v *Client) SyncSecret(appConfig *config.AppConfig, path string) {
+	// get the secret from the source
+	secret, err := v.ReadSecret(path)
+	// WARNING: insecure
+	log.Debug(secret, err)
+
+	// sync the secret to the destination vault
+	err = writeSecret(appConfig.Destination.Client, path, secret)
+	if err != nil {
+		log.Fatal("failed to write secret", err)
+	}
 }
