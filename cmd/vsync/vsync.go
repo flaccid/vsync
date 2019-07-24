@@ -5,6 +5,7 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/flaccid/vsync"
 	"github.com/flaccid/vsync/config"
 	"github.com/flaccid/vsync/vault"
@@ -25,18 +26,34 @@ func beforeApp(c *cli.Context) error {
 
 	// construct the application config here
 	appConfig = &config.AppConfig{
-		Credentials: c.String("credentials"),
 		Vault: &api.Config{
 			Address: c.String("vault-addr"),
 		},
+		VaultCredFile:   c.String("credentials-file"),
 		VaultPassword:   c.String("vault-password"),
 		VaultToken:      c.String("vault-token"),
 		VaultUsername:   c.String("vault-username"),
 		VaultEntrypoint: c.String("entrypoint"),
+		Destination: &config.VaultService{
+			Vault: &api.Config{
+				Address: c.String("destination-vault-addr"),
+			},
+			VaultPassword: c.String("destination-vault-password"),
+			VaultToken:    c.String("destination-vault-token"),
+			VaultUsername: c.String("destination-vault-username"),
+		},
 	}
+	log.Debug("app config: ", appConfig)
 
 	client, err = vault.New(appConfig)
 	log.Debug(client)
+
+	if len(c.String("destination-vault-addr")) > 0 {
+		appConfig.Destination.Client, err = vault.NewDest(appConfig)
+		if err != nil {
+			log.Fatalf("error creating destination client: %+v", err)
+		}
+	}
 
 	return nil
 }
@@ -60,21 +77,21 @@ func main() {
 	app.Before = beforeApp
 	app.Commands = []cli.Command{
 		cli.Command{
-			Name:        "list-mounts",
-			Aliases:     []string{"lm"},
-			Usage:       "lists the vault mount points on the source vault server",
-			UsageText:   "vsync --list-mounts",
-			Description: "list the vault mounts",
+			Name:        "list",
+			Aliases:     []string{"ls"},
+			Usage:       "lists secrets in the entrypoint path",
+			UsageText:   "vsync list",
+			Description: "list secrets",
 			Action: func(c *cli.Context) error {
-				client.ListVaultMounts()
+				client.ListSecrets(appConfig.VaultEntrypoint)
 				return nil
 			},
 		},
 		cli.Command{
 			Name:        "read-secret",
 			Aliases:     []string{"rs"},
-			Usage:       "reads a single secret from the vault",
-			UsageText:   "vsync --read-secret",
+			Usage:       "reads a single secret from the source vault",
+			UsageText:   "vsync read-secret",
 			Description: "read single secret",
 			ArgsUsage:   "[secret path]",
 			Action: func(c *cli.Context) error {
@@ -83,7 +100,7 @@ func main() {
 				}
 				secret, err := client.ReadSecret(c.Args().First())
 				if err != nil {
-					log.Panic(err)
+					log.Fatal(err)
 				}
 				log.Info(secret)
 				return nil
@@ -92,8 +109,8 @@ func main() {
 		cli.Command{
 			Name:        "write-secret",
 			Aliases:     []string{"ws"},
-			Usage:       "writes a single secret to the vault",
-			UsageText:   "vsync --write-secret",
+			Usage:       "writes a single secret to the source vault",
+			UsageText:   "vsync write-secret",
 			Description: "write single secret",
 			Action: func(c *cli.Context) error {
 				secret := &vault.Secret{
@@ -109,13 +126,51 @@ func main() {
 			},
 		},
 		cli.Command{
+			Name:        "sync-secret",
+			Aliases:     []string{"ss"},
+			Usage:       "syncs a single secret to the destination vault",
+			UsageText:   "vsync sync-secret",
+			Description: "sync a single secret",
+			Action: func(c *cli.Context) error {
+				if len(c.Args().First()) < 1 {
+					log.Fatal("please provide a secret path to sync")
+				}
+				client.SyncSecret(appConfig, c.Args().First())
+				return nil
+			},
+		},
+		cli.Command{
 			Name:        "dump-secrets",
 			Aliases:     []string{"ds"},
 			Usage:       "dumps all the secrets from the source vault server",
-			UsageText:   "vsync --dump-secrets",
+			UsageText:   "vsync dump-secrets",
 			Description: "dump em'",
 			Action: func(c *cli.Context) error {
 				client.DumpSecrets(appConfig.VaultEntrypoint)
+				return nil
+			},
+		},
+		cli.Command{
+			Name:        "list-mounts",
+			Aliases:     []string{"lm"},
+			Usage:       "lists the vault mount points on the source vault server",
+			UsageText:   "vsync list-mounts",
+			Description: "list the vault mounts",
+			Action: func(c *cli.Context) error {
+				client.ListVaultMounts()
+				return nil
+			},
+		},
+		cli.Command{
+			Name:        "show-config",
+			Aliases:     []string{"sc"},
+			Usage:       "show a summary of the config",
+			UsageText:   "vsync show-config",
+			Description: "print config",
+			Action: func(c *cli.Context) error {
+				// TODO: pretty print out config and mask secrets
+				// currently using spew and is insecure
+				spew.Dump(appConfig)
 				return nil
 			},
 		},
@@ -123,28 +178,28 @@ func main() {
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
 			Name:   "vault-addr,a",
-			Usage:  "the url address of the vault service",
+			Usage:  "url address of the source vault service",
 			Value:  "http://127.0.0.1:8200",
 			EnvVar: "VAULT_ADDR",
 		},
 		cli.StringFlag{
 			Name:   "vault-token,t",
-			Usage:  "a vault token used to authenticate to vault service",
+			Usage:  "vault token used to authenticate to source vault service",
 			EnvVar: "VAULT_TOKEN",
 		},
 		cli.StringFlag{
 			Name:   "vault-username,u",
-			Usage:  "the vault username to use to authenticate to vault service",
+			Usage:  "vault username to use to authenticate to source vault service",
 			EnvVar: "VAULT_USERNAME",
 		},
 		cli.StringFlag{
 			Name:   "vault-password,p",
-			Usage:  "the vault password to use to authenticate to vault service",
+			Usage:  "vault password to use to authenticate to source vault service",
 			EnvVar: "VAULT_PASSWORD",
 		},
 		cli.StringFlag{
-			Name:   "credentials,c",
-			Usage:  "the path to a file (json|yaml) containing the username and password for userpass authenticaion",
+			Name:   "credentials-file,c",
+			Usage:  "path to a file (json|yaml) containing the username and password for userpass authentication",
 			EnvVar: "VAULT_CREDENTIALS",
 		},
 		cli.StringFlag{
@@ -155,7 +210,7 @@ func main() {
 		},
 		cli.StringFlag{
 			Name:   "destination-vault-addr",
-			Usage:	"destination vault url",
+			Usage:  "destination vault url",
 			EnvVar: "DESTINATION_VAULT_ADDR",
 		},
 		cli.StringFlag{
@@ -174,10 +229,10 @@ func main() {
 			EnvVar: "DESTINATION_VAULT_PASSWORD",
 		},
 		cli.StringFlag{
-			Name:  "log-level,l",
-			Usage: "logging threshold level: debug|info|warn|error|fatal|panic",
+			Name:   "log-level,l",
+			Usage:  "logging threshold level: debug|info|warn|error|fatal|panic",
 			EnvVar: "VSYNC_LOG_LEVEL",
-			Value: "info",
+			Value:  "info",
 		},
 	}
 	app.Run(os.Args)
