@@ -59,3 +59,30 @@ func New(c *config.AppConfig) (*Client, error) {
 		client: client,
 	}, err
 }
+
+func NewDest(c *config.AppConfig) (*api.Client, error) {
+	log.Debugf("create destination vault client to: %s", c.Destination.Vault.Address)
+
+	// step: get the client configuration
+	config := api.DefaultConfig()
+	config.Address = c.Destination.Vault.Address
+	config.HttpClient = &http.Client{
+		Timeout: time.Duration(15) * time.Second,
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		},
+	}
+
+	// step: get the client
+	client, err := api.NewClient(config)
+	if err != nil {
+		return nil, err
+	}
+
+	// step: set the tocken for the client to use
+	client.SetToken(c.Destination.VaultToken)
+
+	return client, err
+}
