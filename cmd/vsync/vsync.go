@@ -140,6 +140,17 @@ func main() {
 			},
 		},
 		cli.Command{
+			Name:        "sync-secrets",
+			Aliases:     []string{"s"},
+			Usage:       "syncs all secrets to the destination vault",
+			UsageText:   "vsync sync-secrets",
+			Description: "sync all secrets",
+			Action: func(c *cli.Context) error {
+				client.SyncSecrets(appConfig)
+				return nil
+			},
+		},
+		cli.Command{
 			Name:        "dump-secrets",
 			Aliases:     []string{"ds"},
 			Usage:       "dumps all the secrets from the source vault server",

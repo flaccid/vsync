@@ -89,3 +89,10 @@ func (v *Client) SyncSecret(appConfig *config.AppConfig, path string) {
 		log.Fatal("failed to write secret", err)
 	}
 }
+
+// SyncSecrets syncs all secrets from source to destination vault
+func (v *Client) SyncSecrets(appConfig *config.AppConfig) {
+	path := appConfig.VaultEntrypoint
+	log.Debugf("sync %s", path)
+	syncNode(v, appConfig, path)
+}
