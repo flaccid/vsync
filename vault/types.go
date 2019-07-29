@@ -3,7 +3,7 @@ package vault
 import "github.com/hashicorp/vault/api"
 
 type Client struct {
-	client *api.Client
+	Client *api.Client
 }
 
 type Secret struct {

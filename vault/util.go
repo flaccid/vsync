@@ -1,23 +1,35 @@
 package vault
 
 import (
+	"fmt"
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/flaccid/vsync/config"
+	"github.com/hashicorp/vault/api"
 )
+
+// returns client based on appconfig provided
+func getClient(appConfig *config.AppConfig, destinationVault bool) (client *api.Client) {
+	if destinationVault {
+		return appConfig.Destination.Client
+	} else {
+		return appConfig.Source.Client
+	}
+}
 
 // normalizeVaultPath takes out possible double slashes
 func normalizeVaultPath(path string) (newPath string) {
 	return strings.Replace(path, "//", "/", -1)
 }
 
-// walkNode iterates on a secret path that appears to be a folder
-func walkNode(v *Client, path string) {
+// dumpNode iterates on a secret path and dumps all recursiviely
+func dumpNode(v *api.Client, path string) {
+	log.Debug("api client ", v)
 	path = normalizeVaultPath(path)
-	log.Debug("walk ", path)
+	log.Debugf("walk %s", path)
 
-	secretsList, err := v.client.Logical().List(path)
+	secretsList, err := v.Logical().List(path)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -27,13 +39,15 @@ func walkNode(v *Client, path string) {
 		for _, p := range b.([]interface{}) {
 			if p.(string)[len(p.(string))-1:] == "/" {
 				node := p.(string)
-				walkNode(v, path+"/"+node)
+				dumpNode(v, path+"/"+node)
 			} else {
-				secret, err := v.ReadSecret(path + "/" + p.(string))
+				p := normalizeVaultPath(path + "/" + p.(string))
+				secret, err := v.Logical().Read(p)
 				if err != nil {
 					log.Panic(err)
 				}
-				log.Info(secret)
+				fmt.Printf("    %s:\n", p)
+				fmt.Println(secret.Data)
 			}
 		}
 	}
@@ -42,7 +56,7 @@ func walkNode(v *Client, path string) {
 // syncNode iterates on a secret path on source to sync to destination
 func syncNode(v *Client, appConfig *config.AppConfig, path string) {
 	// get the secrets list at the entrypoint path
-	secretsList, err := v.client.Logical().List(path)
+	secretsList, err := appConfig.Source.Client.Logical().List(path)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -57,7 +71,7 @@ func syncNode(v *Client, appConfig *config.AppConfig, path string) {
 				newPath := normalizeVaultPath(path + "/" + p.(string))
 
 				// get the secret from the source
-				secret, err := v.ReadSecret(newPath)
+				secret, err := v.ReadSecret(appConfig, newPath, false)
 				if err != nil {
 					log.Panic(err)
 				}

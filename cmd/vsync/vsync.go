@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"strings"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -13,10 +14,14 @@ import (
 	"github.com/urfave/cli"
 )
 
-var appConfig *config.AppConfig
-var client *vault.Client
+var (
+	appConfig *config.AppConfig
+	client    *vault.Client
+	path      string
+)
 
 func beforeApp(c *cli.Context) error {
+	// any validation do here
 	level, err := log.ParseLevel(c.GlobalString("log-level"))
 	if err != nil {
 		log.Fatalf("unable to determine and set log level: %+v", err)
@@ -26,33 +31,40 @@ func beforeApp(c *cli.Context) error {
 
 	// construct the application config here
 	appConfig = &config.AppConfig{
-		Vault: &api.Config{
-			Address: c.String("vault-addr"),
+		Source: &config.VaultService{
+			Vault: &api.Config{
+				Address: c.String("vault-addr"),
+			},
+			VaultCredFile:   c.String("credentials-file"),
+			VaultPassword:   c.String("vault-password"),
+			VaultToken:      c.String("vault-token"),
+			VaultUsername:   c.String("vault-username"),
+			VaultEntrypoint: c.String("entrypoint"),
 		},
-		VaultCredFile:   c.String("credentials-file"),
-		VaultPassword:   c.String("vault-password"),
-		VaultToken:      c.String("vault-token"),
-		VaultUsername:   c.String("vault-username"),
-		VaultEntrypoint: c.String("entrypoint"),
 		Destination: &config.VaultService{
 			Vault: &api.Config{
 				Address: c.String("destination-vault-addr"),
 			},
-			VaultPassword: c.String("destination-vault-password"),
-			VaultToken:    c.String("destination-vault-token"),
-			VaultUsername: c.String("destination-vault-username"),
+			VaultEntrypoint: c.String("entrypoint"),
+			VaultPassword:   c.String("destination-vault-password"),
+			VaultToken:      c.String("destination-vault-token"),
+			VaultUsername:   c.String("destination-vault-username"),
 		},
 	}
-	log.Debug("app config: ", appConfig)
+	log.Debug(spew.Sdump(appConfig))
 
-	client, err = vault.New(appConfig)
-	log.Debug(client)
+	appConfig.Source.Client, err = vault.New(appConfig)
+	if err != nil {
+		log.Fatalf("error creating source client: %+v", err)
+	}
+	log.Debug("source client", appConfig.Source.Client)
 
 	if len(c.String("destination-vault-addr")) > 0 {
 		appConfig.Destination.Client, err = vault.NewDest(appConfig)
 		if err != nil {
 			log.Fatalf("error creating destination client: %+v", err)
 		}
+		log.Debug(appConfig.Destination.Client)
 	}
 
 	return nil
@@ -82,8 +94,12 @@ func main() {
 			Usage:       "lists secrets in the entrypoint path",
 			UsageText:   "vsync list",
 			Description: "list secrets",
+			Flags: []cli.Flag{
+				cli.BoolFlag{Name: "destination-vault, ds",
+					Usage: "peforms the operation on the destination vault"},
+			},
 			Action: func(c *cli.Context) error {
-				client.ListSecrets(appConfig.VaultEntrypoint)
+				client.ListSecrets(appConfig, c.Bool("destination-vault"))
 				return nil
 			},
 		},
@@ -94,34 +110,54 @@ func main() {
 			UsageText:   "vsync read-secret",
 			Description: "read single secret",
 			ArgsUsage:   "[secret path]",
+			Flags: []cli.Flag{
+				cli.BoolFlag{Name: "destination-vault, ds",
+					Usage: "peforms the operation on the destination vault"},
+			},
 			Action: func(c *cli.Context) error {
-				if len(c.Args().First()) < 1 {
+				path := c.Args().First()
+				if len(path) < 1 {
 					log.Fatal("please provide a secret path to read")
 				}
-				secret, err := client.ReadSecret(c.Args().First())
+				log.Debugf("read secret %s", path)
+
+				secret, err := client.ReadSecret(appConfig, path, c.Bool("destination-vault"))
 				if err != nil {
 					log.Fatal(err)
 				}
-				log.Info(secret)
+				log.Infof("%s: %s", path, secret.Data)
+
 				return nil
 			},
 		},
 		cli.Command{
 			Name:        "write-secret",
 			Aliases:     []string{"ws"},
-			Usage:       "writes a single secret to the source vault",
-			UsageText:   "vsync write-secret",
-			Description: "write single secret",
+			Usage:       "writes a single kv secret to the source vault",
+			UsageText:   "vsync write-secret [path] [key=value]",
+			Description: "write single key/value secret",
+			Flags: []cli.Flag{
+				cli.BoolFlag{Name: "destination-vault, ds",
+					Usage: "peforms the operation on the destination vault"},
+			},
 			Action: func(c *cli.Context) error {
+				if len(c.Args().First()) < 1 {
+					log.Fatal("please provide a secret path to write")
+				}
+				if len(c.Args()[1]) < 1 {
+					log.Fatal("please provide a key=value for the secret")
+				}
+				kv := strings.Split(c.Args()[1], "=")
 				secret := &vault.Secret{
-					Path: "secret/foo",
+					Path: c.Args().First(),
 					Values: map[string]interface{}{
-						"value": "world",
-						"foo":   "bar",
-						"age":   "-1",
+						kv[0]: kv[1],
 					},
 				}
-				client.WriteSecret(secret)
+				err := client.WriteSecret(appConfig, secret, c.Bool("destination-vault"))
+				if err != nil {
+					log.Fatal(err)
+				}
 				return nil
 			},
 		},
@@ -135,7 +171,13 @@ func main() {
 				if len(c.Args().First()) < 1 {
 					log.Fatal("please provide a secret path to sync")
 				}
-				client.SyncSecret(appConfig, c.Args().First())
+				path = c.Args().First()
+				err := client.SyncSecret(appConfig, path)
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				log.Infof("secret %s successfully sync'd", path)
 				return nil
 			},
 		},
@@ -156,8 +198,12 @@ func main() {
 			Usage:       "dumps all the secrets from the source vault server",
 			UsageText:   "vsync dump-secrets",
 			Description: "dump em'",
+			Flags: []cli.Flag{
+				cli.BoolFlag{Name: "destination-vault, ds",
+					Usage: "peforms the operation on the destination vault"},
+			},
 			Action: func(c *cli.Context) error {
-				client.DumpSecrets(appConfig.VaultEntrypoint)
+				client.DumpSecrets(appConfig, c.Bool("destination-vault"))
 				return nil
 			},
 		},
@@ -167,8 +213,12 @@ func main() {
 			Usage:       "lists the vault mount points on the source vault server",
 			UsageText:   "vsync list-mounts",
 			Description: "list the vault mounts",
+			Flags: []cli.Flag{
+				cli.BoolFlag{Name: "destination-vault, ds",
+					Usage: "peforms the operation on the destination vault"},
+			},
 			Action: func(c *cli.Context) error {
-				client.ListVaultMounts()
+				client.ListVaultMounts(appConfig, c.Bool("destination-vault"))
 				return nil
 			},
 		},
@@ -181,7 +231,7 @@ func main() {
 			Action: func(c *cli.Context) error {
 				// TODO: pretty print out config and mask secrets
 				// currently using spew and is insecure
-				spew.Dump(appConfig)
+				log.Info(spew.Sdump(appConfig))
 				return nil
 			},
 		},

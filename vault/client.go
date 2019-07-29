@@ -15,28 +15,30 @@ import (
 // TODO: look at completing the remaining auth methods from
 // https://github.com/cloudwatt/vault-sync/blob/master/pkg/vault/vault.go
 
-func New(c *config.AppConfig) (*Client, error) {
-	log.Debugf("create vault client to: %s", c.Vault.Address)
+func New(c *config.AppConfig) (client *api.Client, err error) {
+	log.Debugf("create vault client to: %s", c.Source.Vault.Address)
 
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		log.Fatalf("unable to detect home directory", err)
-	}
-
-	if len(c.VaultToken) < 1 {
-		data, err := ioutil.ReadFile(homeDir + "/.vault-token")
+	if len(c.Source.VaultToken) < 1 {
+		homeDir, err := os.UserHomeDir()
 		if err != nil {
-			log.Fatalf("file reading error", err)
+			log.Fatalf("unable to detect home directory", err)
 		}
-		c.VaultToken = string(data)
-	}
 
-	// uncomment to debug vault token (insecure!)
-	// log.Debug("vault token: "+c.VaultToken)
+		_, err = os.Stat(homeDir + "/.vault-token")
+ 		if err != nil {
+			data, err := ioutil.ReadFile(homeDir + "/.vault-token")
+			if err != nil {
+				log.Fatalf("file reading error", err)
+			}
+			c.Source.VaultToken = string(data)
+			// uncomment to debug vault token (insecure!)
+			// log.Debug("vault token: "+c.VaultToken)
+		}
+	}
 
 	// step: get the client configuration
 	config := api.DefaultConfig()
-	config.Address = c.Vault.Address
+	config.Address = c.Source.Vault.Address
 	config.HttpClient = &http.Client{
 		Timeout: time.Duration(15) * time.Second,
 		Transport: &http.Transport{
@@ -47,17 +49,15 @@ func New(c *config.AppConfig) (*Client, error) {
 	}
 
 	// step: get the client
-	client, err := api.NewClient(config)
+	client, err = api.NewClient(config)
 	if err != nil {
-		return nil, err
+		log.Fatalf("error creating client ", err)
 	}
 
 	// step: set the tocken for the client to use
-	client.SetToken(c.VaultToken)
+	client.SetToken(c.Source.VaultToken)
 
-	return &Client{
-		client: client,
-	}, err
+	return client, nil
 }
 
 func NewDest(c *config.AppConfig) (*api.Client, error) {

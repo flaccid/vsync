@@ -17,12 +17,7 @@ type VaultService struct {
 // AppConfig is the global application config
 // which also includes the vault api config
 type AppConfig struct {
-	Destination     *VaultService
-	LogLevel        string
-	Vault           *api.Config
-	VaultCredFile   string
-	VaultPassword   string
-	VaultToken      string
-	VaultUsername   string
-	VaultEntrypoint string
+	Source      *VaultService
+	Destination *VaultService
+	LogLevel    string
 }
