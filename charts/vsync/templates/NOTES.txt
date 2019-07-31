@@ -1,0 +1,4 @@
+{{if eq .Values.workload.type "job"}}
+Get your pod name:
+kubectl get pods --namespace default -l "app.kubernetes.io/name=vsync,app.kubernetes.io/instance=vsync" -o jsonpath="{.items[0].metadata.name}"
+{{end}}

@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: "{{ template "vsync.fullname" . }}-env"
+  labels:
+    app: {{ template "vsync.name" . }}
+    chart: {{ template "vsync.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+data:
+  VAULT_ADDR: "{{ .Values.vault.source.address }}"
+  DESTINATION_VAULT_ADDR: "{{ .Values.vault.destination.address }}"

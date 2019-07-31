@@ -1,0 +1,55 @@
+{{if eq .Values.workload.type "job"}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "vsync.fullname" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "vsync.name" . }}
+    helm.sh/chart: {{ include "vsync.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "vsync.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      restartPolicy: {{ .Values.restartPolicy }}
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          args: ["sync-secrets"]
+
+          env:
+          - name: VAULT_ADDR
+            value: {{ .Values.vault.source.address }}
+          - name: VAULT_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: {{ template "vsync.fullname" . }}-vault-tokens
+                key: vault-token
+          - name: DESTINATION_VAULT_ADDR
+            value: {{ .Values.vault.destination.address }}
+          - name: DESTINATION_VAULT_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: {{ template "vsync.fullname" . }}-vault-tokens
+                key: destination-vault-token
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          resources:
+{{ toYaml .Values.resources | indent 12 }}
+    {{- with .Values.nodeSelector }}
+      nodeSelector:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+{{end}}

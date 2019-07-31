@@ -1,0 +1,54 @@
+replicaCount: 1
+
+workload:
+  type: job
+
+vault:
+  source:
+    address: http://localhost:8200
+    token: "foo"
+    entrypoint: /secret
+  destination:
+    address:
+    token: "bar"
+    entrypoint: /secret
+
+args:
+
+# used by cron job
+jobs:
+  - name: vsync
+    image:
+      repository: flaccid/vsync
+      tag: latest
+      imagePullPolicy: Always
+    schedule: "*/5 * * * *"
+    failedJobsHistoryLimit: 1
+    successfulJobsHistoryLimit: 3
+    concurrencyPolicy: Forbid
+    restartPolicy: OnFailure
+    resources:
+      limits:
+        cpu: 50m
+        memory: 256Mi
+      requests:
+        cpu: 50m
+        memory: 256Mi
+
+# used by job
+image:
+  repository: flaccid/vsync
+  tag: latest
+  pullPolicy: IfNotPresent
+restartPolicy: OnFailure
+
+nameOverride: ""
+fullnameOverride: ""
+
+resources: {}
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

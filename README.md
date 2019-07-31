@@ -10,6 +10,43 @@ Hashicorp Vault one-way secrets sync tool (written in golang).
 
 `vsync --help`
 
+### Helm Chart
+
+Validate the chart:
+
+`helm lint charts/vsync`
+
+Dry run and print out rendered YAML:
+
+`helm install --dry-run --debug --name vsync charts/vsync`
+
+Install the chart:
+
+`helm install --name vsync charts/vsync`
+
+Or, with a more complete config from env:
+
+```
+helm install \
+  --name vsync charts/vsync \
+  --set vault.source.address="$VAULT_ADDR" \
+  --set vault.source.token="$VAULT_TOKEN" \
+  --set vault.destination.address="$DESTINATION_VAULT_ADDR" \
+  --set vault.destination.token="$DESTINATION_VAULT_TOKEN"
+```
+
+Upgrade the chart:
+
+`helm upgrade vsync charts/vsync`
+
+Testing after deployment:
+
+`helm test vsync`
+
+Completely remove the chart:
+
+`helm delete --purge vsync`
+
 ## Development
 
 The easiest way to get testing is to just run up a local vault dev server:
