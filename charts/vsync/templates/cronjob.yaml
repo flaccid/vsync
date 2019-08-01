@@ -24,57 +24,37 @@ spec:
             cron: {{ $job.name }}
         spec:
           containers:
-          - image: "{{ $job.image.repository }}:{{ $job.image.tag }}"
-            imagePullPolicy: {{ $job.image.imagePullPolicy }}
-            name: {{ $job.name }}
-            env:
-            - name: VAULT_ADDR
-              value: {{ $vault.source.address }}
-            - name: VAULT_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: vsync-vault-tokens
-                  key: vault-token
-            - name: DESTINATION_VAULT_ADDR
-              value: {{ $vault.destination.address }}
-            - name: DESTINATION_VAULT_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: vsync-vault-tokens
-                  key: destination-vault-token
-            {{- if $job.command }}
-            command: {{ $job.command }}
-            {{- end }}
-            {{- with $job.args }}
-            args:
-{{ toYaml . | indent 12 }}
-            {{- with $job.resources }}
-            resources:
-{{ toYaml . | indent 14 }}
-            {{- end }}
-            {{- with $job.volumeMounts }}
-            volumeMounts:
-{{ toYaml . | indent 12 }}
-            {{- end }}
+            - name: {{ $job.name }}
+              image: "{{ $job.image.repository }}:{{ $job.image.tag }}"
+              imagePullPolicy: {{ $job.image.imagePullPolicy }}
+              {{- if $job.command }}
+              command: {{ $job.command }}
               {{- end }}
-          {{- with $job.nodeSelector }}
-          nodeSelector:
-{{ toYaml . | indent 12 }}
-          {{- end }}
-          {{- with $job.affinity }}
-          affinity:
-{{ toYaml . | indent 12 }}
-          {{- end }}
-          {{- with $job.tolerations }}
-          tolerations:
-{{ toYaml . | indent 12 }}
-          {{- end }}
-          restartPolicy: {{ $job.restartPolicy }}
-          {{- with $job.volumes }}
-          volumes:
-{{ toYaml . | indent 12 }}
-          {{- end }}
-  schedule: {{ $job.schedule | quote }}
-  successfulJobsHistoryLimit: {{ $job.successfulJobsHistoryLimit }}
+              {{- with $job.args }}
+              args:
+{{ toYaml . | indent 14 }}
+              {{- end }}
+              env:
+              - name: VAULT_ADDR
+                value: {{ $vault.source.address }}
+              - name: VAULT_TOKEN
+                valueFrom:
+                  secretKeyRef:
+                    name: vsync-vault-tokens
+                    key: vault-token
+              - name: DESTINATION_VAULT_ADDR
+                value: {{ $vault.destination.address }}
+              - name: DESTINATION_VAULT_TOKEN
+                valueFrom:
+                  secretKeyRef:
+                    name: vsync-vault-tokens
+                    key: destination-vault-token
+              {{- with $job.resources }}
+              resources:
+{{ toYaml . | indent 14 }}
+              {{- end }}
+        restartPolicy: {{ $job.restartPolicy }}
+schedule: {{ $job.schedule | quote }}
+successfulJobsHistoryLimit: {{ $job.successfulJobsHistoryLimit }}
 {{- end }}
 {{end}}
