@@ -22,6 +22,7 @@ jobs:
       repository: flaccid/vsync
       tag: latest
       imagePullPolicy: Always
+    args: ["sync-secrets"]      
     schedule: "*/5 * * * *"
     failedJobsHistoryLimit: 1
     successfulJobsHistoryLimit: 3
