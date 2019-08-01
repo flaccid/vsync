@@ -10,6 +10,11 @@ Hashicorp Vault one-way secrets sync tool (written in golang).
 
 `vsync --help`
 
+## TODO
+
+- support other auth methods; see https://github.com/lanceplarsen/go-vault-demo/blob/master/client/vault.go
+- look at the higher ground; see https://github.com/tuenti/secrets-manager
+
 ### Helm Chart
 
 Validate the chart:
