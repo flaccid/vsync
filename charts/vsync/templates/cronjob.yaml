@@ -24,36 +24,36 @@ spec:
             cron: {{ $job.name }}
         spec:
           containers:
-            - name: {{ $job.name }}
-              image: "{{ $job.image.repository }}:{{ $job.image.tag }}"
-              imagePullPolicy: {{ $job.image.imagePullPolicy }}
-              {{- if $job.command }}
-              command: {{ $job.command }}
-              {{- end }}
-              {{- with $job.args }}
-              args:
-{{ toYaml . | indent 14 }}
-              {{- end }}
-              env:
-              - name: VAULT_ADDR
-                value: {{ $vault.source.address }}
-              - name: VAULT_TOKEN
-                valueFrom:
-                  secretKeyRef:
-                    name: vsync-vault-tokens
-                    key: vault-token
-              - name: DESTINATION_VAULT_ADDR
-                value: {{ $vault.destination.address }}
-              - name: DESTINATION_VAULT_TOKEN
-                valueFrom:
-                  secretKeyRef:
-                    name: vsync-vault-tokens
-                    key: destination-vault-token
-              {{- with $job.resources }}
-              resources:
-{{ toYaml . | indent 16 }}
-              {{- end }}
-            restartPolicy: {{ $job.restartPolicy }}
+          - name: {{ $job.name }}
+            image: "{{ $job.image.repository }}:{{ $job.image.tag }}"
+            imagePullPolicy: {{ $job.image.imagePullPolicy }}
+            {{- if $job.command }}
+            command: {{ $job.command }}
+            {{- end }}
+            {{- with $job.args }}
+            args:
+{{ toYaml . | indent 13 }}
+            {{- end }}
+            env:
+            - name: VAULT_ADDR
+              value: {{ $vault.source.address }}
+            - name: VAULT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: vsync-vault-tokens
+                  key: vault-token
+            - name: DESTINATION_VAULT_ADDR
+              value: {{ $vault.destination.address }}
+            - name: DESTINATION_VAULT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: vsync-vault-tokens
+                  key: destination-vault-token
+            {{- with $job.resources }}
+            resources:
+{{ toYaml . | indent 15 }}
+            {{- end }}
+          restartPolicy: {{ $job.restartPolicy }}
 schedule: {{ $job.schedule | quote }}
 successfulJobsHistoryLimit: {{ $job.successfulJobsHistoryLimit }}
 {{- end }}
