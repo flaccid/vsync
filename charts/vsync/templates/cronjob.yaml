@@ -53,7 +53,7 @@ spec:
               resources:
 {{ toYaml . | indent 14 }}
               {{- end }}
-        restartPolicy: {{ $job.restartPolicy }}
+            restartPolicy: {{ $job.restartPolicy }}
 schedule: {{ $job.schedule | quote }}
 successfulJobsHistoryLimit: {{ $job.successfulJobsHistoryLimit }}
 {{- end }}
