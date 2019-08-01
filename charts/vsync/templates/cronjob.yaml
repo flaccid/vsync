@@ -54,7 +54,7 @@ spec:
 {{ toYaml . | indent 15 }}
             {{- end }}
           restartPolicy: {{ $job.restartPolicy }}
-schedule: {{ $job.schedule | quote }}
-successfulJobsHistoryLimit: {{ $job.successfulJobsHistoryLimit }}
+  schedule: {{ $job.schedule | quote }}
+  successfulJobsHistoryLimit: {{ $job.successfulJobsHistoryLimit }}
 {{- end }}
 {{end}}
