@@ -21,7 +21,6 @@ spec:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           args: ["sync-secrets"]
-
           env:
           - name: VAULT_ADDR
             value: {{ .Values.vault.source.address }}
