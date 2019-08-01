@@ -51,7 +51,7 @@ spec:
                     key: destination-vault-token
               {{- with $job.resources }}
               resources:
-{{ toYaml . | indent 14 }}
+{{ toYaml . | indent 16 }}
               {{- end }}
             restartPolicy: {{ $job.restartPolicy }}
 schedule: {{ $job.schedule | quote }}
