@@ -15,7 +15,6 @@ jobs:
     executor: go-builder
     steps:
       - checkout
-      - setup_remote_docker
       - run: make go-build
 
   build:
