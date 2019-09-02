@@ -13,6 +13,7 @@ executors:
 jobs:
   go-build:
     executor: go-builder
+    working_directory: /go/src/github.com/flaccid/vsync
     steps:
       - checkout
       - run: make go-build
