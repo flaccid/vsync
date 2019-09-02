@@ -14,6 +14,10 @@ WORKING_DIR := $(shell pwd)
 go-deps:: ## fetch all the go dependencies
 		go get ./...
 
+go-build:: ## native golang build
+		@make go-deps
+		@go build cmd/vsync/vsync.go
+
 docker-release:: docker-build docker-push ## builds and pushes the docker image to the registry
 
 docker-push:: ## pushes the docker image to the registry
