@@ -34,6 +34,7 @@ func beforeApp(c *cli.Context) error {
 
 	// construct the application config here
 	appConfig = &config.AppConfig{
+		DryRun: c.Bool("dry"),
 		Source: &config.VaultService{
 			Vault: &api.Config{
 				Address: c.String("vault-addr"),
@@ -362,6 +363,11 @@ func main() {
 			Name:   "destination-vault-password",
 			Usage:  "destination vault password",
 			EnvVar: "DESTINATION_VAULT_PASSWORD",
+		},
+		cli.BoolFlag{
+			Name:   "dry",
+			Usage:  "dry run",
+			EnvVar: "VSYNC_DRY_RUN",
 		},
 		cli.StringFlag{
 			Name:   "log-level,l",
