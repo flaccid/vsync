@@ -1,15 +1,22 @@
 package vault
 
 import (
+	"errors"
+	"strings"
+
 	log "github.com/Sirupsen/logrus"
 	"github.com/flaccid/vsync/config"
 	"github.com/hashicorp/vault/api"
 )
 
+const (
+	apiVersion = "v1"
+)
+
 var (
 	client     *api.Client
 	entryPoint string
-	path       string
+	secretPath string
 )
 
 // GetClient returns the underlining client
@@ -25,6 +32,9 @@ func (v *Client) ReadSecret(appConfig *config.AppConfig, path string, destinatio
 		client = appConfig.Source.Client
 	}
 	secret, err := client.Logical().Read(path)
+	if secret == nil {
+		return nil, errors.New("no secret found in " + path)
+	}
 
 	return secret, err
 }
@@ -45,15 +55,18 @@ func (v *Client) WriteSecret(appConfig *config.AppConfig, secret *Secret, destin
 	return nil
 }
 
-// writeSecret writes a single secret to the provided vault
-// a private function that requires providing your vault api client
-func writeSecret(v *api.Client, path string, secret *api.Secret) error {
-	log.Debugf("write the secret to %s with %s", path, secret.Data)
+// DeleteSecret delets a single secret from the vault
+func (v *Client) DeleteSecret(appConfig *config.AppConfig, secretPath string, destinationVault bool) error {
+	log.Debugf("delete the secret %s", secretPath)
 
-	_, err := v.Logical().Write(path, secret.Data)
+	client = getClient(appConfig, destinationVault)
+
+	secret, err := client.Logical().Delete(secretPath)
 	if err != nil {
 		return err
 	}
+
+	log.Infof("secret %s deleted", secret)
 
 	return nil
 }
@@ -62,13 +75,13 @@ func writeSecret(v *api.Client, path string, secret *api.Secret) error {
 func (v *Client) ListSecrets(appConfig *config.AppConfig, destinationVault bool) {
 	if destinationVault {
 		client = appConfig.Destination.Client
-		path = appConfig.Destination.VaultEntrypoint
+		secretPath = appConfig.Destination.VaultEntrypoint
 	} else {
 		client = appConfig.Source.Client
-		path = appConfig.Source.VaultEntrypoint
+		secretPath = appConfig.Source.VaultEntrypoint
 	}
 
-	secretsList, err := client.Logical().List(path)
+	secretsList, err := client.Logical().List(secretPath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -92,6 +105,11 @@ func (v *Client) ListVaultMounts(appConfig *config.AppConfig, destinationVault b
 	}
 }
 
+// TODO: implement
+// func (v *Client) GetMountProperties(appConfig *config.AppConfig, destinationVault bool, mount string) {
+//
+// }
+
 // DumpSecrets dumps all the secrets within the vault recursiviely
 func (v *Client) DumpSecrets(appConfig *config.AppConfig, destinationVault bool) {
 	if destinationVault {
@@ -106,7 +124,7 @@ func (v *Client) DumpSecrets(appConfig *config.AppConfig, destinationVault bool)
 }
 
 // SyncSecret syncs a single secret from source to destination vault
-func (v *Client) SyncSecret(appConfig *config.AppConfig, path string) (error) {
+func (v *Client) SyncSecret(appConfig *config.AppConfig, path string) error {
 	// get the secret from the source
 	secret, err := v.ReadSecret(appConfig, path, false)
 	if err != nil {
@@ -134,4 +152,43 @@ func (v *Client) SyncSecrets(appConfig *config.AppConfig) {
 	path := appConfig.Source.VaultEntrypoint
 	log.Debugf("sync %s", path)
 	syncNode(v, appConfig, path)
+}
+
+// RemoveOprhans removes secret paths in the destination vault that no longer exist in the source vault
+func (v *Client) RemoveOrphans(appConfig *config.AppConfig, path string) (secretPaths []string, err error) {
+	log.Debugf("remove orphans from %s", path)
+
+	var orphans []string
+	secretPaths, err = getSecretPaths(appConfig.Destination.Client, path)
+	//log.Debug(secretPaths)
+
+	// for each secret found in the destination,
+	// see if it exists in the source and remove if not found
+	for _, secretPath := range secretPaths {
+		secret, err := v.ReadSecret(appConfig, secretPath, false)
+		if err != nil {
+			log.Error(err)
+			orphans = append(orphans, secretPath)
+		} else {
+			if secret.Data != nil {
+				log.Debugf("%s: ", secretPath, secret)
+			}
+		}
+	}
+
+	secretPaths = orphans
+	log.Debugf("secrets to remove: ", secretPaths)
+
+	// remove the orphans
+	for _, orphan := range orphans {
+		log.Info("remove " + orphan)
+
+		// assume kv2
+		err := v.DeleteSecret(appConfig, strings.Replace(orphan, "/secret", "/secret/data", 1), true)
+		if err != nil {
+			log.Errorf("failed to delete secret: %s", err)
+		}
+	}
+
+	return secretPaths, err
 }

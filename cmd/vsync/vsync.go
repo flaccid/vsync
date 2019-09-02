@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"io/ioutil"
 	"os"
 	"strings"
 	"time"
@@ -11,6 +13,7 @@ import (
 	"github.com/flaccid/vsync/config"
 	"github.com/flaccid/vsync/vault"
 	"github.com/hashicorp/vault/api"
+	"github.com/tidwall/pretty"
 	"github.com/urfave/cli"
 )
 
@@ -208,6 +211,25 @@ func main() {
 			},
 		},
 		cli.Command{
+			Name:        "remove-orphans",
+			Aliases:     []string{"ro"},
+			Usage:       "removes orphaned secret paths in the destination vault",
+			UsageText:   "vsync remove-orphas",
+			Description: "remove orphaned secret paths",
+			Action: func(c *cli.Context) error {
+				if len(appConfig.Destination.Vault.Address) < 1 {
+					log.Fatal("please provide destination vault parameters")
+				}
+				log.Info("fetching all secrets in destination vault, please wait...")
+				orphansRemoved, err := client.RemoveOrphans(appConfig, appConfig.Destination.VaultEntrypoint)
+				if err != nil {
+					log.Fatal(err)
+				}
+				log.Infof("%v orphans successfully removed", len(orphansRemoved))
+				return nil
+			},
+		},
+		cli.Command{
 			Name:        "list-mounts",
 			Aliases:     []string{"lm"},
 			Usage:       "lists the vault mount points on the source vault server",
@@ -219,6 +241,58 @@ func main() {
 			},
 			Action: func(c *cli.Context) error {
 				client.ListVaultMounts(appConfig, c.Bool("destination-vault"))
+				return nil
+			},
+		},
+		cli.Command{
+			Name:        "health",
+			Aliases:     []string{"hc"},
+			Usage:       "perform a health check",
+			UsageText:   "vsync health",
+			Description: "performs a health check on the vault server",
+			Flags: []cli.Flag{
+				cli.BoolFlag{Name: "destination-vault, ds",
+					Usage: "peform operation on the destination vault server"},
+			},
+			Action: func(c *cli.Context) error {
+				health, err := client.HealthCheck(appConfig, c.Bool("destination-vault"))
+				if err != nil {
+					log.Fatalf("error getting health status: %s", err)
+				}
+				fmt.Println(health)
+				return nil
+			},
+		},
+		cli.Command{
+			Name:        "request",
+			Aliases:     []string{"req"},
+			Usage:       "make a raw arbitrary request",
+			UsageText:   "vsync request [type] [uri]",
+			Description: "make a raw arbitrary request",
+			Flags: []cli.Flag{
+				cli.BoolFlag{Name: "destination-vault, ds",
+					Usage: "peforms the operation on the destination vault"},
+				cli.BoolFlag{Name: "api-version",
+					Usage: "api version for the request"},
+			},
+			Action: func(c *cli.Context) error {
+				if len(c.Args().Get(0)) < 2 {
+					log.Fatalf("please provide the request type, e.g. GET")
+				}
+				if len(c.Args().Get(1)) < 2 {
+					log.Fatalf("please provide the request uri, e.g. /sys/health")
+				}
+				log.Infof("request %s", c.Args())
+				resp, err := client.Request(appConfig, c.Bool("destination-vault"), c.Args().Get(0), c.Args().Get(1), "")
+				if err != nil {
+					log.Fatalf("error making http request: %s", err)
+				}
+				log.Debug(resp, err)
+				body, err := ioutil.ReadAll(resp.Body)
+				if err != nil {
+					log.Fatalf("error reading http response body: %s", err)
+				}
+				fmt.Println(string(pretty.Color(pretty.Pretty(body), nil)))
 				return nil
 			},
 		},
