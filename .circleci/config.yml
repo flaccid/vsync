@@ -6,8 +6,18 @@ executors:
       DOCKER_IMAGE_TAG: flaccid/vsync:latest
     docker:
       - image: docker
+  go-builder:
+    docker:
+      - image: circleci/golang:1.12
 
 jobs:
+  go-build:
+    executor: go-builder
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run: make go-build
+
   build:
     executor: docker-publisher
     steps:
@@ -43,6 +53,7 @@ workflows:
   version: 2
   build_and_publish:
     jobs:
+      - go-build
       - build
       - publish:
           requires:
