@@ -16,7 +16,14 @@ go-deps:: ## fetch all the go dependencies
 
 go-build:: ## native golang build
 		@make go-deps
-		@go build cmd/vsync/vsync.go
+		@go build -o bin/linux_amd64/vsync cmd/vsync/vsync.go
+
+go-build-macos:: ## build macos64 binary
+	GOOS=darwin GOARCH=amd64 go build -o bin/darwin_amd64/vsync cmd/vsync/vsync.go
+
+go-build-windows:: ## build windows64 binary
+	go get -u github.com/konsorten/go-windows-terminal-sequences
+	GOOS=windows GOARCH=amd64 go build -o bin/darwin_amd64/vsync cmd/vsync/vsync.go
 
 docker-release:: docker-build docker-push ## builds and pushes the docker image to the registry
 
@@ -50,6 +57,12 @@ helm-render:: ## prints out the rendered chart
 
 helm-validate:: ## runs a lint on the helm chart
 		@helm lint charts/vsync
+
+install-ghr:: ## installs ghr
+		@cd /tmp
+		@wget https://github.com/tcnksm/ghr/releases/download/v0.12.2/ghr_v0.12.2_linux_amd64.tar.gz
+		@tar zxvf ghr_v0.12.2_linux_amd64.tar.gz
+		@sudo mv ghr_v0.12.2_linux_amd64/ghr /usr/local/bin/
 
 vault-dev::	## runs a vault dev server in foreground
 		@vault server -dev
