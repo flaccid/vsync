@@ -215,7 +215,7 @@ func main() {
 			Name:        "remove-orphans",
 			Aliases:     []string{"ro"},
 			Usage:       "removes orphaned secret paths in the destination vault",
-			UsageText:   "vsync remove-orphas",
+			UsageText:   "vsync remove-orphans",
 			Description: "remove orphaned secret paths",
 			Action: func(c *cli.Context) error {
 				if len(appConfig.Destination.Vault.Address) < 1 {
