@@ -4,7 +4,7 @@ Hashicorp Vault one-way secrets sync tool (written in golang).
 
 ## Installation
 
-`go get -u github.com/flaccid/vsync/cmd`
+`go get -u github.com/flaccid/vsync/cmd/vsync`
 
 ## Usage
 
@@ -20,7 +20,7 @@ Make an arbitrary request to the source vault:
 vsync request GET /sys/health
 ```
 
-Or on the destination vault:
+Or, on the destination vault:
 
 ```
 vsync request -ds GET /sys/health
