@@ -18,7 +18,7 @@ type VaultService struct {
 // which also includes the vault api config
 type AppConfig struct {
 	Destination *VaultService
-	DryRun					bool
+	DryRun      bool
 	LogLevel    string
 	Source      *VaultService
 }
