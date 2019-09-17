@@ -35,8 +35,8 @@ func (v *Client) RemoveOrphans(appConfig *config.AppConfig, path string) (secret
 	for _, orphan := range orphans {
 		if appConfig.DryRun != true {
 			log.Info("remove " + orphan)
-			// assume kv2
-			err := v.DeleteSecret(appConfig, strings.Replace(orphan, "/secret", "/secret/data", 1), true)
+			// assume kv2, deletes metadata and all versions
+			err := v.DeleteSecret(appConfig, strings.Replace(orphan, "/secret", "/secret/metadata", 1), true)
 			if err != nil {
 				log.Errorf("failed to delete secret: %s", err)
 			}
