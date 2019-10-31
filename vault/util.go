@@ -19,9 +19,14 @@ var (
 // writeSecret writes a single secret to the provided vault
 // a private function that requires providing your vault api client
 func writeSecret(v *api.Client, path string, secret *api.Secret) error {
+	// TODO: add kv1/2 switching, currently assumes v2
+	// only currently matches /secret mount :(
+	v2Path := strings.Replace(path, "/secret", "/secret/data", 1)
+	data := map[string]interface{}{"data": secret.Data}
+
 	log.Debugf("write the secret to %s with %s", path, secret.Data)
 
-	_, err := v.Logical().Write(path, secret.Data)
+	_, err := v.Logical().Write(v2Path, data)
 	if err != nil {
 		return err
 	}
@@ -101,7 +106,7 @@ func syncNode(v *Client, appConfig *config.AppConfig, path string) {
 				// sync the secret to the destination vault
 				err = writeSecret(appConfig.Destination.Client, newPath, secret)
 				if err != nil {
-					log.Fatal("failed to write secret", err)
+					log.Fatal("failed to write secret: ", err)
 				}
 				log.Infof("sync'd %s", newPath)
 			}
