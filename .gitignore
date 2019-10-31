@@ -16,3 +16,6 @@
 
 # golang compiled binaries
 /bin/
+
+# ignore things like chart packages
+*.tgz
