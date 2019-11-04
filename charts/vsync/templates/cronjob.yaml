@@ -9,9 +9,12 @@
 apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
-  name: "{{ $release_name }}-{{ $job.name }}"
+  name: {{ include "vsync.fullname" . }}
   labels:
-    chart: "{{ $chart_name }}-{{ $chart_version }}"
+    app.kubernetes.io/name: {{ include "vsync.name" . }}
+    helm.sh/chart: {{ include "vsync.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
 spec:
   concurrencyPolicy: {{ $job.concurrencyPolicy }}
   failedJobsHistoryLimit: {{ $job.failedJobsHistoryLimit }}
@@ -20,8 +23,8 @@ spec:
       template:
         metadata:
           labels:
-            app: {{ $release_name }}
-            cron: {{ $job.name }}
+            app.kubernetes.io/name: {{ include "vsync.name" . }}
+            app.kubernetes.io/instance: {{ .Release.Name }}
         spec:
           containers:
           - name: {{ $job.name }}
