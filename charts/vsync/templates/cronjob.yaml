@@ -40,14 +40,14 @@ spec:
             - name: VAULT_TOKEN
               valueFrom:
                 secretKeyRef:
-                  name: vsync-vault-tokens
+                  name: {{ template "vsync.fullname" . }}-vault-tokens
                   key: vault-token
             - name: DESTINATION_VAULT_ADDR
               value: {{ $vault.destination.address }}
             - name: DESTINATION_VAULT_TOKEN
               valueFrom:
                 secretKeyRef:
-                  name: vsync-vault-tokens
+                  name: {{ template "vsync.fullname" . }}-vault-tokens
                   key: destination-vault-token
             {{- with $job.resources }}
             resources:
