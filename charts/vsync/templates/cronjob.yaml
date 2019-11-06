@@ -11,7 +11,7 @@
 apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
-  name: {{ $fullname }}
+  name: {{ $fullname }}-{{ .name }}
   labels:
     app.kubernetes.io/name: {{ include "vsync.name" . }}
     helm.sh/chart: {{ include "vsync.chart" . }}
@@ -29,7 +29,7 @@ spec:
             app.kubernetes.io/instance: {{ .Release.Name }}
         spec:
           containers:
-          - name: {{ .name }}
+          - name: vsync
             image: "{{ .image.repository }}:{{ .image.tag }}"
             imagePullPolicy: {{ .image.imagePullPolicy }}
             {{- if .command }}
