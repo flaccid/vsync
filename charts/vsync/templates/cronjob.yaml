@@ -6,7 +6,7 @@
 {{- $release_name := .Release.Name }}
 {{- $vault := .Values.vault }}
 
-{{- range $job := .Values.jobs }}
+{{- range .Values.jobs }}
 ---
 apiVersion: batch/v1beta1
 kind: CronJob
@@ -18,8 +18,8 @@ metadata:
     app.kubernetes.io/instance: {{ $release_name }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
 spec:
-  concurrencyPolicy: {{ $job.concurrencyPolicy }}
-  failedJobsHistoryLimit: {{ $job.failedJobsHistoryLimit }}
+  concurrencyPolicy: {{ .concurrencyPolicy }}
+  failedJobsHistoryLimit: {{ .failedJobsHistoryLimit }}
   jobTemplate:
     spec:
       template:
@@ -29,13 +29,13 @@ spec:
             app.kubernetes.io/instance: {{ .Release.Name }}
         spec:
           containers:
-          - name: {{ $job.name }}
-            image: "{{ $job.image.repository }}:{{ $job.image.tag }}"
-            imagePullPolicy: {{ $job.image.imagePullPolicy }}
-            {{- if $job.command }}
-            command: {{ $job.command }}
+          - name: {{ .name }}
+            image: "{{ .image.repository }}:{{ .image.tag }}"
+            imagePullPolicy: {{ .image.imagePullPolicy }}
+            {{- if .command }}
+            command: {{ .command }}
             {{- end }}
-            {{- with $job.args }}
+            {{- with .args }}
             args:
 {{ toYaml . | indent 13 }}
             {{- end }}
@@ -54,12 +54,12 @@ spec:
                 secretKeyRef:
                   name: {{ $fullname }}-vault-tokens
                   key: destination-vault-token
-            {{- with $job.resources }}
+            {{- with .resources }}
             resources:
 {{ toYaml . | indent 15 }}
             {{- end }}
-          restartPolicy: {{ $job.restartPolicy }}
-  schedule: {{ $job.schedule | quote }}
-  successfulJobsHistoryLimit: {{ $job.successfulJobsHistoryLimit }}
+          restartPolicy: {{ .restartPolicy }}
+  schedule: {{ .schedule | quote }}
+  successfulJobsHistoryLimit: {{ .successfulJobsHistoryLimit }}
 {{- end }}
 {{end}}
