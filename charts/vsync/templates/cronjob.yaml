@@ -11,7 +11,7 @@
 apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
-  name: {{ include "vsync.fullname" . }}
+  name: {{ $fullname }}
   labels:
     app.kubernetes.io/name: {{ include "vsync.name" . }}
     helm.sh/chart: {{ include "vsync.chart" . }}
