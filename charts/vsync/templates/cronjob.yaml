@@ -1,6 +1,8 @@
 {{if eq .Values.workload.type "cronjob"}}
+
 {{- $chart_name := .Chart.Name }}
 {{- $chart_version := .Chart.Version | replace "+" "_" }}
+{{- $fullname := include "vsync.fullname" . -}}
 {{- $release_name := .Release.Name }}
 {{- $vault := .Values.vault }}
 
@@ -13,7 +15,7 @@ metadata:
   labels:
     app.kubernetes.io/name: {{ include "vsync.name" . }}
     helm.sh/chart: {{ include "vsync.chart" . }}
-    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/instance: {{ $release_name }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
 spec:
   concurrencyPolicy: {{ $job.concurrencyPolicy }}
@@ -43,14 +45,14 @@ spec:
             - name: VAULT_TOKEN
               valueFrom:
                 secretKeyRef:
-                  name: {{ template "vsync.fullname" . }}-vault-tokens
+                  name: {{ $fullname }}-vault-tokens
                   key: vault-token
             - name: DESTINATION_VAULT_ADDR
               value: {{ $vault.destination.address }}
             - name: DESTINATION_VAULT_TOKEN
               valueFrom:
                 secretKeyRef:
-                  name: {{ template "vsync.fullname" . }}-vault-tokens
+                  name: {{ $fullname }}-vault-tokens
                   key: destination-vault-token
             {{- with $job.resources }}
             resources:
