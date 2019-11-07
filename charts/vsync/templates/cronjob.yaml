@@ -13,7 +13,7 @@ kind: CronJob
 metadata:
   name: {{ $fullname }}-{{ .name }}
   labels:
-    app.kubernetes.io/name: {{ .name" }}
+    app.kubernetes.io/name: {{ $fullname }}-{{ .name }}
     app.kubernetes.io/instance: {{ $release_name }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
     helm.sh/chart: {{ $chart_name }}
