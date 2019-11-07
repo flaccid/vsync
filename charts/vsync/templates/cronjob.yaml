@@ -4,6 +4,7 @@
 {{- $chart_version := .Chart.Version | replace "+" "_" }}
 {{- $fullname := include "vsync.fullname" . -}}
 {{- $release_name := .Release.Name }}
+{{- $release_service := .Release.Service }}
 {{- $vault := .Values.vault }}
 
 {{- range .Values.jobs }}
@@ -15,7 +16,7 @@ metadata:
   labels:
     app.kubernetes.io/name: {{ $fullname }}-{{ .name }}
     app.kubernetes.io/instance: {{ $release_name }}
-    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/managed-by: {{ $release_service }}
     helm.sh/chart: {{ $chart_name }}
 spec:
   concurrencyPolicy: {{ .concurrencyPolicy }}
