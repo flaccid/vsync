@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/flaccid/vsync"
 	"github.com/flaccid/vsync/config"

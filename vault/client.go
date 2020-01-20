@@ -7,7 +7,7 @@ import (
 	"os"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"github.com/flaccid/vsync/config"
 	"github.com/hashicorp/vault/api"
 )

@@ -3,7 +3,7 @@ package vault
 import (
 	"errors"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"github.com/flaccid/vsync/config"
 	"github.com/hashicorp/vault/api"
 )
@@ -43,6 +43,10 @@ func (v *Client) WriteSecret(appConfig *config.AppConfig, secret *Secret, destin
 	log.Debugf("write the secret to %s with %s", secret.Path, secret.Values)
 
 	client = getClient(appConfig, destinationVault)
+
+	// add in kv v2 support check
+
+	// check if secrets are the same
 
 	_, err := client.Logical().Write(secret.Path, secret.Values)
 	if err != nil {
