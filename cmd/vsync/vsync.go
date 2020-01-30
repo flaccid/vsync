@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -129,7 +130,13 @@ func main() {
 				if err != nil {
 					log.Fatal(err)
 				}
-				log.Infof("%s: %s", path, secret.Data)
+
+				log.Debugf("%s: %s", path, secret.Data)
+				j, err := json.MarshalIndent(secret, "", "    ")
+				if err != nil {
+					log.Fatalf("error marshalling json: ", err.Error())
+		    }
+				fmt.Printf("%s\n", string(j))
 
 				return nil
 			},
@@ -137,39 +144,59 @@ func main() {
 		cli.Command{
 			Name:        "write-secret",
 			Aliases:     []string{"ws"},
-			Usage:       "writes a single kv secret to the source vault",
-			UsageText:   "vsync write-secret [path] [key=value]",
-			Description: "write single key/value secret",
+			Usage:       "writes a single or multiple kv secret(s) to the vault",
+			UsageText:   "vsync write-secret [path] [key=value,[[key=value]]]",
+			Description: "write key/value secret(s)",
 			Flags: []cli.Flag{
 				cli.BoolFlag{Name: "destination-vault, ds",
 					Usage: "peforms the operation on the destination vault"},
 			},
 			Action: func(c *cli.Context) error {
+				// NOTE: this overwrites, it does not merge the keys of a secret
+
 				if len(c.Args().First()) < 1 {
 					log.Fatal("please provide a secret path to write")
 				}
-				if len(c.Args()[1]) < 1 {
+				if len(c.Args()) < 2 {
 					log.Fatal("please provide a key=value for the secret")
 				}
-				kv := strings.Split(c.Args()[1], "=")
+
+				// local variable for the secret values
+				values := map[string]interface{}{}
+
+				// initiate the secret without any values
 				secret := &vault.Secret{
 					Path: c.Args().First(),
-					Values: map[string]interface{}{
-						kv[0]: kv[1],
-					},
 				}
+
+				// split out the cmdline secrets into pairs
+				pairs := strings.Split(c.Args()[1], ",")
+				log.Debugf("pairs: ", pairs)
+
+				// iterate through the pairs and assign to the local var
+				for _, pair := range pairs {
+					kv := strings.Split(pair, "=")
+					log.Debugf("pair split: %s, %s", kv[0], kv[1])
+					values[kv[0]] = kv[1]
+				}
+
+				// assign the values in the secret from the local var
+				secret.Values = values
+
+				// finally, write the entire secret
 				err := client.WriteSecret(appConfig, secret, c.Bool("destination-vault"))
 				if err != nil {
 					log.Fatal(err)
 				}
+
 				return nil
 			},
 		},
 		cli.Command{
 			Name:        "sync-secret",
 			Aliases:     []string{"ss"},
-			Usage:       "syncs a single secret to the destination vault",
-			UsageText:   "vsync sync-secret",
+			Usage:       "syncs a single secret from source to destination vault",
+			UsageText:   "vsync sync-secret [path]",
 			Description: "sync a single secret",
 			Action: func(c *cli.Context) error {
 				if len(c.Args().First()) < 1 {
@@ -180,8 +207,6 @@ func main() {
 				if err != nil {
 					log.Fatal(err)
 				}
-
-				log.Infof("secret %s successfully sync'd", path)
 				return nil
 			},
 		},
@@ -241,7 +266,15 @@ func main() {
 					Usage: "peforms the operation on the destination vault"},
 			},
 			Action: func(c *cli.Context) error {
-				client.ListVaultMounts(appConfig, c.Bool("destination-vault"))
+				vaultMounts, err := client.ListVaultMounts(appConfig, c.Bool("destination-vault"))
+				if err != nil {
+					log.Fatalf(err.Error())
+				}
+				j, err := vault.ToJson(vaultMounts)
+				if err != nil {
+					log.Fatalf(err.Error())
+				}
+				fmt.Println(string(j))
 				return nil
 			},
 		},

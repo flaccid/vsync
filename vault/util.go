@@ -1,8 +1,10 @@
 package vault
 
 import (
+	"encoding/json"
 	"fmt"
 	"path"
+	"reflect"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -18,15 +20,17 @@ var (
 
 // writeSecret writes a single secret to the provided vault
 // a private function that requires providing your vault api client
-func writeSecret(v *api.Client, path string, secret *api.Secret) error {
-	// TODO: add kv1/2 switching, currently assumes v2
-	// only currently matches /secret mount :(
-	v2Path := strings.Replace(path, "/secret", "/secret/data", 1)
-	data := map[string]interface{}{"data": secret.Data}
+// supports generic and kv engines only
+func writeSecret(v *api.Client, path string, data map[string]interface{}) error {
+	// update path and payload if engine is kv2
+	if engineType(v, path) == "kv" {
+		path = strings.Replace(path, "/secret", "/secret/data", 1)
+		data = map[string]interface{}{"data": data}
+	}
 
-	log.Debugf("write the secret to %s with %s", path, secret.Data)
-
-	_, err := v.Logical().Write(v2Path, data)
+	// finally, write the secret
+	log.Debugf("write the secret to %s with [redacted]", path)
+	_, err := v.Logical().Write(path, data)
 	if err != nil {
 		return err
 	}
@@ -34,7 +38,7 @@ func writeSecret(v *api.Client, path string, secret *api.Secret) error {
 	return nil
 }
 
-// returns client based on appconfig provided
+// getClient returns source or destionation vault client depending on boolean provided
 func getClient(appConfig *config.AppConfig, destinationVault bool) (client *api.Client) {
 	if destinationVault {
 		return appConfig.Destination.Client
@@ -103,12 +107,29 @@ func syncNode(v *Client, appConfig *config.AppConfig, path string) {
 				// WARNING: insecure
 				log.Debug(secret, err)
 
-				// sync the secret to the destination vault
-				err = writeSecret(appConfig.Destination.Client, newPath, secret)
-				if err != nil {
-					log.Fatal("failed to write secret: ", err)
+				// get the secret from the destination, if it exists
+				destSecret, err := v.ReadSecret(appConfig, path, true)
+					if err != nil {
+					log.Debugf("%s: destination secret likely doesn't exist", err)
 				}
-				log.Infof("sync'd %s", newPath)
+				// WARNING: insecure
+				log.Debug(destSecret, err)
+
+				log.Infof("secret: [%s], destSecret: [%s]", secret, destSecret)
+
+				// when the secret doesn't exist or the values are not the same
+				// TODO: below assumes the existing secret is of kv2!
+				if destSecret == nil || ! reflect.DeepEqual(secret.Data, destSecret.Data["data"]) {
+					log.Debug("secret appears to need sync")
+					err := writeSecret(appConfig.Destination.Client, newPath, secret.Data)
+					if err != nil {
+						log.Fatal("failed to write secret", err)
+					}
+					log.Debugf("secret written to %s", newPath)
+					log.Infof("%s sync'd", newPath)
+				} else {
+					log.Info("secret %s appears to be up to date, no sync required", path)
+				}
 			}
 		}
 	}
@@ -176,4 +197,35 @@ func getSecretPaths(v *api.Client, secretPath string) (secretPaths []string, err
 
 	secretPaths = childPaths
 	return secretPaths, err
+}
+
+// engineType returns the engine type by mount of a given arbitrary secret path
+func engineType(v *api.Client, path string) (engineType string) {
+	mounts, err := getMounts(v)
+	if err != nil {
+		log.Errorf("error getting mounts: ", err)
+	}
+
+	// NOTE: only currently supports one folder depth mountpoints
+	mountPoint := strings.Split(normalizeVaultPath(path), "/")[1] + "/"
+	log.Debugf("mountpoint for %s = %s", path, mountPoint)
+	log.Debugf("check if %s is in ", mountPoint, mounts)
+	for k := range mounts {
+		if k == mountPoint {
+			// get the engine type from the mountpoint
+			engineType = mounts[k].Type
+			log.Debugf("engine type for %s is %+v", mountPoint, mounts[k].Type)
+		}
+	}
+	return engineType
+}
+
+// toJson converts an arbitrary object into JSON and returns in bytes
+func ToJson(o interface{}) (j []byte, err error) {
+	j, err = json.MarshalIndent(o, "", "    ")
+	if err != nil {
+		log.Fatalf("error marshalling json: ", err.Error())
+	}
+
+	return j, err
 }
