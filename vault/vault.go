@@ -33,8 +33,7 @@ func (v *Client) ReadSecret(appConfig *config.AppConfig, path string, destinatio
 	if engineType(client, path) == "kv" {
 		path = strings.Replace(path, "/secret", "/secret/data", 1)
 	}
-
-	secret, err := client.Logical().Read(path)
+	secret, err := client.Logical().Read(normalizeVaultPath(path))
 	if secret == nil {
 		return nil, errors.New("no secret found in " + path)
 	}

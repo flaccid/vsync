@@ -114,8 +114,7 @@ func syncNode(v *Client, appConfig *config.AppConfig, path string) {
 				}
 				// WARNING: insecure
 				log.Debug(destSecret, err)
-
-				log.Infof("secret: [%s], destSecret: [%s]", secret, destSecret)
+				log.Infof("secret: [%s], destSecret: [%s]", secret, destSecret.Data)
 
 				// when the secret doesn't exist or the values are not the same
 				// TODO: below assumes the existing secret is of kv2!
