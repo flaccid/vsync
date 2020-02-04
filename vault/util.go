@@ -91,13 +91,16 @@ func syncNode(v *Client, appConfig *config.AppConfig, path string) {
 	}
 
 	for a, b := range secretsList.Data {
-		log.Debug(a, b)
+		log.Debugf("initial crawl data", a, b)
 		for _, p := range b.([]interface{}) {
+			log.Debug("crawling...")
 			if p.(string)[len(p.(string))-1:] == "/" {
 				node := p.(string)
+				log.Debug("crawling deeper...")
 				syncNode(v, appConfig, path+"/"+node)
 			} else {
 				newPath := normalizeVaultPath(path + "/" + p.(string))
+				log.Debugf("sync secret at %s", newPath)
 
 				// get the secret from the source
 				secret, err := v.ReadSecret(appConfig, newPath, false)
@@ -105,21 +108,22 @@ func syncNode(v *Client, appConfig *config.AppConfig, path string) {
 					log.Panic(err)
 				}
 				// WARNING: insecure
-				log.Debug(secret, err)
+				log.Debugf("source secret data of %s: %s, err: %s", newPath, secret, err)
 
 				// get the secret from the destination, if it exists
-				destSecret, err := v.ReadSecret(appConfig, path, true)
+				destSecret, err := v.ReadSecret(appConfig, newPath, true)
 					if err != nil {
 					log.Debugf("%s: destination secret likely doesn't exist", err)
+					// WARNING: insecure
+					log.Debugf("secret: [%s], destSecret: [%s]", secret, destSecret)
+				} else {
+					// WARNING: insecure
+					log.Debugf("secret: [%s], destSecret: [%s]", secret, destSecret.Data)
 				}
-				// WARNING: insecure
-				log.Debug(destSecret, err)
-				log.Infof("secret: [%s], destSecret: [%s]", secret, destSecret.Data)
 
 				// when the secret doesn't exist or the values are not the same
-				// TODO: below assumes the existing secret is of kv2!
 				if destSecret == nil || ! reflect.DeepEqual(secret.Data, destSecret.Data["data"]) {
-					log.Debug("secret appears to need sync")
+					log.Debug("secret %s appears to need sync", newPath)
 					err := writeSecret(appConfig.Destination.Client, newPath, secret.Data)
 					if err != nil {
 						log.Fatal("failed to write secret", err)
@@ -127,7 +131,7 @@ func syncNode(v *Client, appConfig *config.AppConfig, path string) {
 					log.Debugf("secret written to %s", newPath)
 					log.Infof("%s sync'd", newPath)
 				} else {
-					log.Info("secret %s appears to be up to date, no sync required", path)
+					log.Debugf("%s already up-to-date", newPath)
 				}
 			}
 		}
