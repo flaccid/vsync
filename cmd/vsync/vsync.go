@@ -8,12 +8,12 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/flaccid/vsync"
 	"github.com/flaccid/vsync/config"
 	"github.com/flaccid/vsync/vault"
 	"github.com/hashicorp/vault/api"
+	log "github.com/sirupsen/logrus"
 	"github.com/tidwall/pretty"
 	"github.com/urfave/cli"
 )
@@ -135,7 +135,7 @@ func main() {
 				j, err := json.MarshalIndent(secret, "", "    ")
 				if err != nil {
 					log.Fatalf("error marshalling json: ", err.Error())
-		    }
+				}
 				fmt.Printf("%s\n", string(j))
 
 				return nil
@@ -216,8 +216,21 @@ func main() {
 			Usage:       "syncs all secrets to the destination vault",
 			UsageText:   "vsync sync-secrets",
 			Description: "sync all secrets",
+			Flags: []cli.Flag{
+				cli.BoolFlag{Name: "remove-orphans, ro",
+					Usage: "removes orphans in the destination vault after sync"},
+			},
 			Action: func(c *cli.Context) error {
 				client.SyncSecrets(appConfig)
+				if c.Bool("remove-orphans") {
+					log.Info("remove orphans in destination vault")
+					log.Info("fetching all secrets in destination vault, please wait...")
+					orphansRemoved, err := client.RemoveOrphans(appConfig, appConfig.Destination.VaultEntrypoint)
+					if err != nil {
+						log.Fatal(err)
+					}
+					log.Infof("%v orphans successfully removed", len(orphansRemoved))
+				}
 				return nil
 			},
 		},
