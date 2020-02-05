@@ -30,7 +30,7 @@ spec:
             app.kubernetes.io/instance: {{ $release_name }}
         spec:
           containers:
-          - name: vsync
+          - name: {{ .name }}
             image: "{{ .image.repository }}:{{ .image.tag }}"
             imagePullPolicy: {{ .image.imagePullPolicy }}
             {{- if .command }}
